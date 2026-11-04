@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NECROPORRA 🪦</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 1300px;
+      margin: auto;
+      padding: 2rem;
+    }
+    h1 { text-align: center; }
+    #tabs {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    #tabs button {
+      margin: 0.25rem 0.5rem;
+      padding: 0.5rem 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      background: #fff;
+    }
+    #tabs button.activo {
+      background: #333;
+      color: #fff;
+      border-color: #333;
+    }
+    #main-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2rem;
+    }
+    #estadisticas, #ranking, #ganador, #seccion-global {
+      background: #f3f3f3;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    #ganador {
+      text-align: center;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #estado-año {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: 0.75rem;
+    }
+    #detalle {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 3rem;
+    }
+    .jugador {
+      border: 1px solid #ccc;
+      padding: 1rem;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    .muerto {
+      text-decoration: line-through;
+      color: red;
+    }
+    .titulo-seccion {
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    th, td {
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    td:first-child { text-align: left; font-weight: bold; }
+    #nota-global {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    #aviso-datos {
+      background: #fff3cd;
+      border: 1px solid #e0c36a;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      #main-layout { grid-template-columns: 1fr; }
+      #detalle { grid-template-columns: 1fr; }
+      #seccion-global { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <h1>NECROPORRA 🪦</h1>
+  <div id="aviso-datos"></div>
+  <div id="tabs"></div>
+
+  <!-- VISTA POR AÑO -->
+  <div id="vista-año">
+    <div id="main-layout">
+      <div id="estadisticas">
+        <div class="titulo-seccion">Estadísticas</div>
+        <div id="tabla-estadisticas"></div>
+      </div>
+      <div id="ganador">
+        <div>
+          <div class="titulo-seccion">Ganador del año</div>
+          <div id="nombre-ganador"></div>
+          <div id="estado-año"></div>
+        </div>
+      </div>
+      <div id="ranking">
+        <div class="titulo-seccion">Ranking</div>
+        <div id="tabla-ranking"></div>
+      </div>
+    </div>
+    <div id="detalle"></div>
+  </div>
+
+  <!-- VISTA GLOBAL -->
+  <div id="vista-global" style="display: none;">
+    <div id="seccion-global">
+      <div class="titulo-seccion">🏅 Estadísticas globales</div>
+      <div id="tabla-global"></div>
+      <p id="los-cinco-grandes"></p>
+      <p id="mas-elegidos"></p>
+      <p id="nota-global"></p>
+    </div>
+  </div>
+
+  <script src="datos.js"></script>
+  <script src="stats.js"></script>
+  <script>
+    let añoSeleccionado = AÑOS[AÑOS.length - 1];
+
+    // ---------- Formato ----------
+    const num = (n, d = 1) => n === null || n === undefined ? "-" : n.toFixed(d).replace(".", ",");
+    const pct = n => num(n, 1) + "%";
+    const nombre = id => famoso(id).nombre;
+    const plural = (n, s, p) => `${n} ${n === 1 ? s : p}`;
+
+    // ---------- Pestañas ----------
+    function pintarTabs(activa) {
+      const tabs = document.getElementById("tabs");
+      tabs.innerHTML = AÑOS.map(a =>
+        `<button class="${activa === a ? "activo" : ""}" onclick="cambiarAño(${a})">${a}</button>`
+      ).join("") +
+        `<button class="${activa === "global" ? "activo" : ""}" onclick="mostrarEstadisticas()">🏅 Estadísticas</button>`;
+    }
+
+    function cambiarAño(año) {
+      añoSeleccionado = año;
+      document.getElementById("vista-año").style.display = "block";
+      document.getElementById("vista-global").style.display = "none";
+      pintarTabs(año);
+      renderAño();
+    }
+
+    function mostrarEstadisticas() {
+      document.getElementById("vista-año").style.display = "none";
+      document.getElementById("vista-global").style.display = "block";
+      pintarTabs("global");
+      renderGlobal();
+    }
+
+    // ---------- Vista por año ----------
+    function renderAño() {
+      const año = añoSeleccionado;
+      const porra = PORRAS[año];
+      const ranking = rankingDe(año);
+
+      document.getElementById("tabla-ranking").innerHTML = `
+        <ol>
+          ${ranking.map(r => `<li><strong>${r.nombre}</strong>: ${plural(r.puntos, "punto", "puntos")}</li>`).join("")}
+        </ol>`;
+
+      const ganadores = ganadoresDe(año);
+      document.getElementById("nombre-ganador").innerHTML =
+        ganadores.length ? ganadores.map(g => `🏆 ${g}`).join("<br>") : "—";
+      document.getElementById("estado-año").textContent =
+        porra.cerrado ? "" : (ganadores.length ? "Provisional: el año sigue en juego" : "El año sigue en juego");
+
+      const cabecera = `<tr><th>Jugador</th><th>Edad media</th><th>Aciertos</th><th>Edad media aciertos</th></tr>`;
+      const filas = jugadoresDe(año).map(j => {
+        const ids = seleccionesDe(año, j);
+        const hits = aciertosDe(año, j);
+        return `<tr>
+          <td>${j}</td>
+          <td>${num(media(ids.map(id => edadEn(id, año))))}</td>
+          <td>${hits.length}</td>
+          <td>${num(media(hits.map(id => edadEn(id, año))))}</td>
+        </tr>`;
+      }).join("");
+      document.getElementById("tabla-estadisticas").innerHTML = `<table>${cabecera}${filas}</table>`;
+
+      document.getElementById("detalle").innerHTML = jugadoresDe(año).map(j => `
+        <div class="jugador">
+          <h3>${j}</h3>
+          <ul>
+            ${seleccionesDe(año, j).map(id => `
+              <li class="${porra.muertos.includes(id) ? "muerto" : ""}">
+                ${nombre(id)} (${edadEn(id, año)} años)
+              </li>`).join("")}
+          </ul>
+        </div>`).join("");
+    }
+
+    // ---------- Vista global ----------
+    function renderGlobal() {
+      const st = estadisticasGlobales();
+      const fila = (etiqueta, fn) =>
+        `<tr><td>${etiqueta}</td>${st.map(s => `<td>${fn(s)}</td>`).join("")}</tr>`;
+
+      const lista = ids => ids.map(nombre).join(", ");
+      const conAños = a => a.años.join(", ");
+
+      document.getElementById("tabla-global").innerHTML = `
+        <table>
+          <tr><th></th>${st.map(s => `<th>${s.jugador}</th>`).join("")}</tr>
+          ${fila("Promedio edad", s => num(s.edadMedia))}
+          ${fila("Victorias", s => s.victorias)}
+          ${fila("Aciertos totales", s => s.aciertos)}
+          ${fila("Mejor racha de victorias", s => s.mejorRacha)}
+          ${fila("% de aciertos (sobre selecciones)", s => pct(s.pctAciertos))}
+          ${fila("Prom. edad más bajo", s => `${num(s.mediaMasBaja.media)} (${s.mediaMasBaja.año})`)}
+          ${fila("Prom. edad más alto", s => `${num(s.mediaMasAlta.media)} (${s.mediaMasAlta.año})`)}
+          ${fila("Año con más aciertos", s => `${s.mejorAño.n} (${conAños(s.mejorAño)})`)}
+          ${fila("Cucharas de madera", s => s.cucharas)}
+          ${fila("Persona más repetida", s => `${lista(s.masRepetido.ids)} (${s.masRepetido.veces})`)}
+          ${fila("Acierto más joven", s => s.aciertoJoven ? `${nombre(s.aciertoJoven.id)} (${s.aciertoJoven.edad})` : "-")}
+          ${fila("Acierto más mayor", s => s.aciertoMayor ? `${nombre(s.aciertoMayor.id)} (${s.aciertoMayor.edad})` : "-")}
+          ${TRAMOS.map(t => fila(`% ${t} años`, s => pct(s.pctTramos[t]))).join("")}
+        </table>`;
+
+      document.getElementById("los-cinco-grandes").textContent =
+        `👑 Los grandes (elegidos por todos en algún momento): ${lista(losGrandes()).replaceAll(", ", " · ")}`;
+
+      const top = masElegidos();
+      document.getElementById("mas-elegidos").textContent =
+        `📌 Más veces elegido: ${lista(top.ids).replaceAll(", ", " · ")} · ${top.veces} veces`;
+
+      const abiertos = AÑOS.filter(a => !PORRAS[a].cerrado);
+      document.getElementById("nota-global").textContent =
+        "Edades calculadas con la edad que tenía cada famoso en el año de la porra. " +
+        (abiertos.length
+          ? `Victorias, rachas y cucharas solo cuentan años cerrados (${abiertos.join(", ")} sigue en juego); aciertos y porcentajes sí incluyen ese año.`
+          : "");
+    }
+
+    // ---------- Arranque ----------
+    const avisos = validarDatos();
+    if (avisos.length) {
+      const caja = document.getElementById("aviso-datos");
+      caja.style.display = "block";
+      caja.innerHTML = "<strong>Revisar datos:</strong><br>" + avisos.join("<br>");
+    }
+    cambiarAño(añoSeleccionado);
+  </script>
+</body>
+</html>
