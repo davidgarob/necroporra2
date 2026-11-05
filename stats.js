@@ -132,9 +132,11 @@ function estadisticasJugador(j) {
   };
 
   if (s.aciertosLista.length) {
-    const porEdad = [...s.aciertosLista].sort((x, y) => x.edad - y.edad);
-    s.aciertoJoven = porEdad[0];
-    s.aciertoMayor = porEdad[porEdad.length - 1];
+    // Con empate a edad se devuelven todos los aciertos empatados
+    const edades = s.aciertosLista.map(x => x.edad);
+    const minE = Math.min(...edades), maxE = Math.max(...edades);
+    s.aciertoJoven = s.aciertosLista.filter(x => x.edad === minE);
+    s.aciertoMayor = s.aciertosLista.filter(x => x.edad === maxE);
   }
   return s;
 }

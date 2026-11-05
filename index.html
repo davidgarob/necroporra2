@@ -229,6 +229,8 @@
 
       const lista = ids => ids.map(nombre).join(", ");
       const conAños = a => a.años.join(", ");
+      const aciertosEmpatados = arr =>
+        arr.map(x => `${nombre(x.id)}`).join(" / ") + ` (${arr[0].edad})`;
 
       document.getElementById("tabla-global").innerHTML = `
         <table>
@@ -243,8 +245,8 @@
           ${fila("Año con más aciertos", s => `${s.mejorAño.n} (${conAños(s.mejorAño)})`)}
           ${fila("Cucharas de madera", s => s.cucharas)}
           ${fila("Persona más repetida", s => `${lista(s.masRepetido.ids)} (${s.masRepetido.veces})`)}
-          ${fila("Acierto más joven", s => s.aciertoJoven ? `${nombre(s.aciertoJoven.id)} (${s.aciertoJoven.edad})` : "-")}
-          ${fila("Acierto más mayor", s => s.aciertoMayor ? `${nombre(s.aciertoMayor.id)} (${s.aciertoMayor.edad})` : "-")}
+          ${fila("Acierto más joven", s => s.aciertoJoven ? aciertosEmpatados(s.aciertoJoven) : "-")}
+          ${fila("Acierto más mayor", s => s.aciertoMayor ? aciertosEmpatados(s.aciertoMayor) : "-")}
           ${TRAMOS.map(t => fila(`% ${t} años`, s => pct(s.pctTramos[t]))).join("")}
         </table>`;
 
